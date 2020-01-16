@@ -1,0 +1,56 @@
+{
+  "AWSEBDockerrunVersion": 2,
+  "volumes": [],
+  "containerDefinitions": [
+    /* This will create a container with redis. Port 6379 will be exposed outside the container */
+    {
+      "essential": true,
+      "image": "redis",
+      "name": "redis",
+      "portMappings": [{
+        "containerPort": 6379
+      }],
+      "memory": 128
+    },
+    /* This will run the container built in the previous step and run rails server, link redis to it and expose port 3000 through port 80. */
+    {
+      "name": "app",
+      "image": "<aws_ecs_repository>/my-app:latest",
+      "environment": [],
+      "essential": true,
+      "memory": 256,
+      "links": ["redis"],
+      "mountPoints": [
+        /* Logs present in /app/log will be sent to /var/log/container/awseb-logs-app in host computer */
+        {
+          "sourceVolume": "awseb-logs-app",
+          "containerPath": "/app/log"
+        }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "hostPort": 80
+        }
+      ]
+    },
+    /* This will run the container built in the previous step and run sidekiq, link redis to it and expose port 3000 through port 80. */
+    {
+      "name": "worker",
+      "image": "<aws_ecs_repository>/my-app:latest",
+      "command": ["bundle", "exec", "sidekiq", "-L", "log/sidekiq.log"],
+      "environment": [],
+      "essential": true,
+      "memory": 256,
+      "links": ["redis"],
+      "mountPoints": [
+      /* Logs present in /app/log will be sent to /var/log/container/awseb-logs-worker in host computer */
+        {
+          "sourceVolume": "awseb-logs-worker",
+          "containerPath": "/app/log"
+        }
+      ],
+      "portMappings": []
+    }
+  ]
+}
